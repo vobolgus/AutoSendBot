@@ -1,15 +1,13 @@
-# Telegram Message Scheduler Bot
+# Telegram Auto Sender Bot
 
-This repository contains a Telegram bot that automatically sends a predefined message to a specified channel every day at scheduled times.
+This repository contains an interactive Telegram bot that allows users to schedule messages to be sent automatically to groups where the bot is a member.
 
 ## Repository Structure
 
 ```
 .
-├── .idx
-│   └── dev.nix
 ├── Dockerfile
-├── LICENSE
+├── .dockerignore
 ├── railway.toml
 ├── requirements.txt
 ├── src
@@ -19,23 +17,36 @@ This repository contains a Telegram bot that automatically sends a predefined me
 
 ## Features
 
-- Schedules messages at one or more times per day (cron-style scheduling).
-- Sends messages to a specified Telegram channel.
-- Configurable via environment variables.
-- Basic logging implemented.
+- Interactive bot interface with button menus
+- List groups where the bot is a member
+- View, add, and delete scheduled messages for each group
+- Schedule messages at multiple times per day (cron-style scheduling)
+- User management of their own schedules
+- Persistent storage of schedules
+
+## Bot Commands
+
+| Command   | Description                                     |
+|------------|------------------------------------------------|
+| /start     | Start the bot and get an introduction          |
+| /groups    | List groups where the bot is a member          |
+| /cancel    | Cancel the current operation                   |
 
 ## Environment Variables
 
-| Variable             | Description                                                 |
-|----------------------|-------------------------------------------------------------|
-| TELEGRAM_BOT_TOKEN   | Your Telegram bot token (from BotFather)                    |
-| TELEGRAM_CHAT_ID     | Chat ID or channel username (e.g. `@mychannel`)             |
-| MESSAGE_TEXT         | The text message to send                                    |
-| SCHEDULE_TIMES       | Comma-separated times in `HH:MM` 24-hour format (e.g. `09:00,18:30`) |
+| Variable           | Description                                |
+|--------------------|--------------------------------------------|
+| TELEGRAM_BOT_TOKEN | Your Telegram bot token (from BotFather)   |
+
+## How to Use
+
+1. Add your bot to a Telegram group
+2. Start a private chat with the bot
+3. Use the `/groups` command to see groups where the bot is a member
+4. Select a group to manage schedules
+5. Follow the interactive prompts to view, add, or delete scheduled messages
 
 ## Running Locally
-
-**Prerequisites:** Ensure you have Python 3.x and pip installed and accessible in your system's PATH.
 
 1. Clone the repository:
 ```bash
@@ -51,9 +62,6 @@ pip install -r requirements.txt
 3. Set environment variables:
 ```bash
 export TELEGRAM_BOT_TOKEN="your_token"
-export TELEGRAM_CHAT_ID="@yourchannel"
-export MESSAGE_TEXT="Hello, world!"
-export SCHEDULE_TIMES="09:00,18:30"
 ```
 
 4. Run the bot:
@@ -65,17 +73,14 @@ python src/bot.py
 
 1. Build the image:
 ```bash
-docker build -t telegram-scheduler-bot .
+docker build -t telegram-bot .
 ```
 
 2. Run the container:
 ```bash
 docker run -d \
   -e TELEGRAM_BOT_TOKEN="your_token" \
-  -e TELEGRAM_CHAT_ID="@yourchannel" \
-  -e MESSAGE_TEXT="Hello, world!" \
-  -e SCHEDULE_TIMES="09:00,18:30" \
-  telegram-scheduler-bot
+  telegram-bot
 ```
 
 ## Railway Deployment
@@ -92,12 +97,8 @@ curl -sSL https://railway.app/install.sh | sh
 railway up
 ```
 
-3. Set the environment variables in the Railway dashboard to match the ones above.
-
-## IDX / Cloud Workstations Environment
-
-This project includes a `.idx/dev.nix` file which configures the development environment when opened in IDX or Google Cloud Workstations. This ensures Python and other necessary tools are readily available. You can run the bot directly using `python src/bot.py` within the IDX terminal after setting the environment variables.
+3. Set the environment variables in the Railway dashboard.
 
 ## License
 
-This project is released under the MIT License. See the `LICENSE` file for details.
+This project is released under the MIT License.

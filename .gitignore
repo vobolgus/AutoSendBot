@@ -1,21 +1,45 @@
-# Byte-compiled / optimized / DLL files
+# Python
 __pycache__/
 *.py[cod]
-*$py.class
+*.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
 
-# Virtual environments
-.venv/
-env/
+# Virtual Environment
 venv/
+env/
+ENV/
 
-# IDE directories
+# IDE
 .idea/
 .vscode/
+*.sublime-workspace
+*.sublime-project
 
-# Environment variables file
-.env
+# Data & Logs
+*.log
+user_data.json
 
-# Distribution / packaging
-build/
-dist/
-*.egg-info/
+# OS specific
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
