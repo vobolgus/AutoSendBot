@@ -87,6 +87,20 @@ def get_chats() -> list[tuple[int, str]]:
     finally:
         conn.close()
     
+def get_chats_by_owner(owner_id: int) -> list[tuple[int, str]]:
+    """Return all recorded chats (chat_id, title) where owner_id matches the given user."""
+    conn = get_connection()
+    try:
+        with conn:
+            with conn.cursor() as curs:
+                curs.execute(
+                    "SELECT chat_id, title FROM chats WHERE owner_id = %s;",
+                    (owner_id,),
+                )
+                return curs.fetchall()
+    finally:
+        conn.close()
+    
 def get_chat_owner(chat_id: int) -> Optional[int]:
     """Return the owner_id for a given chat_id, or None if not set."""
     conn = get_connection()

@@ -16,7 +16,7 @@ from telegram.ext import (
     ChatMemberHandler,
 )
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from db import init_db, add_chat, remove_chat, get_chats, get_chat_owner
+from db import init_db, add_chat, remove_chat, get_chats, get_chat_owner, get_chats_by_owner
 
 
 # States for conversation handler
@@ -109,16 +109,17 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 async def list_groups(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """List groups where the bot is a member"""
-    # Get chats from database
+    # Get chats (groups) that this user added the bot to
+    user_id_int = update.effective_user.id
     try:
-        bot_chats = get_chats()
+        bot_chats = get_chats_by_owner(user_id_int)
     except Exception as e:
-        logging.error(f"Error fetching chats from DB: {e}")
+        logging.error(f"Error fetching groups for user {user_id_int}: {e}")
         bot_chats = []
 
     if not bot_chats:
         await update.message.reply_text(
-            "I'm not aware of any groups yet. Add me to a group and I'll remember!"
+            "You don't manage any groups yet. Add me to a group (you must be the one to add me) and I'll remember!"
         )
         return ConversationHandler.END
 

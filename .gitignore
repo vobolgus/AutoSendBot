@@ -43,3 +43,6 @@ user_data.json
 .Trashes
 ehthumbs.db
 Thumbs.db
+/CLAUDE.md
+/example_bot_v20.py
+/test_indent.py
