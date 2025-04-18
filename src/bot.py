@@ -1,9 +1,9 @@
 import os
 import logging
 import json
-from typing import Dict
+from typing import Dict, List, Tuple, Optional
 
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, Chat
 from telegram.ext import (
     Application,
     CommandHandler,
@@ -12,8 +12,10 @@ from telegram.ext import (
     ConversationHandler,
     MessageHandler,
     filters,
+    ChatMemberHandler,
 )
 from apscheduler.schedulers.background import BackgroundScheduler
+from db import init_db, add_chat, remove_chat, get_chats
 
 
 # States for conversation handler
@@ -106,24 +108,16 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 async def list_groups(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """List groups where the bot is a member"""
-    # Get chats where the bot is a member
-    bot_chats = []
+    # Get chats from database
     try:
-        updates = await context.bot.get_updates()
-        for update_obj in updates:
-            if update_obj.message and update_obj.message.chat.type in [
-                "group",
-                "supergroup",
-            ]:
-                bot_chats.append(
-                    (update_obj.message.chat.id, update_obj.message.chat.title)
-                )
+        bot_chats = get_chats()
     except Exception as e:
-        logging.error(f"Error getting updates: {e}")
+        logging.error(f"Error fetching chats from DB: {e}")
+        bot_chats = []
 
     if not bot_chats:
         await update.message.reply_text(
-            "I'm not a member of any groups yet. Add me to a group first!"
+            "I'm not aware of any groups yet. Add me to a group and I'll remember!"
         )
         return ConversationHandler.END
 
@@ -365,6 +359,30 @@ async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     """Log errors caused by updates."""
     logging.error(f"Update {update} caused error {context.error}")
 
+async def chat_member_update(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handle bot's chat member updates to track chats."""
+    result = update.my_chat_member
+    chat = result.chat
+    old_status = result.old_chat_member.status
+    new_status = result.new_chat_member.status
+    # Only track bot's own membership changes
+    if result.new_chat_member.user.id != context.bot.id:
+        return
+    # Added to chat
+    if new_status in ('member', 'administrator'):
+        try:
+            add_chat(chat.id, chat.title or '')
+            logging.info(f"Added chat {chat.id} - {chat.title}")
+        except Exception as e:
+            logging.error(f"Error adding chat {chat.id}: {e}")
+    # Removed from chat
+    elif new_status in ('kicked', 'left'):
+        try:
+            remove_chat(chat.id)
+            logging.info(f"Removed chat {chat.id}")
+        except Exception as e:
+            logging.error(f"Error removing chat {chat.id}: {e}")
+
 
 def main() -> None:
     """Run the bot."""
@@ -418,7 +436,6 @@ def main() -> None:
 
     # Shutdown scheduler when bot is stopped
     scheduler.shutdown()
-
 
 if __name__ == "__main__":
     main()
