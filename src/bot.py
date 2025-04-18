@@ -14,7 +14,7 @@ from telegram.ext import (
     filters,
     ChatMemberHandler,
 )
-from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from db import init_db, add_chat, remove_chat, get_chats, get_chat_owner
 
 
@@ -436,8 +436,8 @@ def main() -> None:
     # Create the application
     application = Application.builder().token(token).build()
 
-    # Create the scheduler for scheduled messages
-    scheduler = BackgroundScheduler()
+    # Create the scheduler for scheduled messages (asyncio-based)
+    scheduler = AsyncIOScheduler()
     scheduler.start()
     application.bot_data["scheduler"] = scheduler
 
