@@ -11,8 +11,8 @@ from telegram.ext import (
     CallbackQueryHandler,
     ConversationHandler,
     MessageHandler,
+    filters,
 )
-from telegram.ext.filters import Filters
 from apscheduler.schedulers.background import BackgroundScheduler
 
 
@@ -368,9 +368,9 @@ def main():
             CHOOSING_GROUP: [CallbackQueryHandler(group_selected)],
             CHOOSING_ACTION: [CallbackQueryHandler(action_selected)],
             SET_MESSAGE: [
-                MessageHandler(Filters.text & ~Filters.command, message_entered)
+                MessageHandler(filters.TEXT & ~filters.COMMAND, message_entered)
             ],
-            SET_TIME: [MessageHandler(Filters.text & ~Filters.command, time_entered)],
+            SET_TIME: [MessageHandler(filters.TEXT & ~filters.COMMAND, time_entered)],
         },
         fallbacks=[CommandHandler("cancel", cancel)],
     )
