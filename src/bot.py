@@ -434,12 +434,19 @@ def main() -> None:
         logging.error("Environment variable TELEGRAM_BOT_TOKEN must be set")
         return
 
-    # Create the application
-    application = Application.builder().token(token).build()
-
     # Create the scheduler for scheduled messages (asyncio-based)
     scheduler = AsyncIOScheduler()
-    scheduler.start()
+    # Start scheduler once the bot's asyncio loop is running
+    async def start_scheduler(app: Application) -> None:
+        scheduler.start()
+
+    # Create the application with post-init hook to start the scheduler
+    application = (
+        Application.builder()
+        .token(token)
+        .post_init(start_scheduler)
+        .build()
+    )
     application.bot_data["scheduler"] = scheduler
 
     # Register handlers
