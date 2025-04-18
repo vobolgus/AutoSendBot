@@ -3,6 +3,7 @@ import logging
 import json
 from typing import Dict, List, Tuple, Optional
 
+from apscheduler.schedulers.background import BackgroundScheduler
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, Chat
 from telegram.ext import (
     Application,
