@@ -145,16 +145,20 @@ async def group_selected(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         await query.edit_message_text("Operation cancelled.")
         return ConversationHandler.END
 
-    # Extract chat_id from callback data
-    chat_id = query.data.split("_")[1]
-    context.user_data["selected_chat_id"] = chat_id
+    # Extract chat_id from callback data and save
+    chat_id_str = query.data.split("_", 1)[1]
+    context.user_data["selected_chat_id"] = chat_id_str
 
-    # Get chat title
-    updates = await context.bot.get_updates()
-    for update_obj in updates:
-        if update_obj.message and str(update_obj.message.chat.id) == chat_id:
-            context.user_data["selected_chat_title"] = update_obj.message.chat.title
-            break
+    # Retrieve chat title from database, fallback to ID if missing
+    chat_title = chat_id_str
+    try:
+        for cid, title in get_chats():
+            if cid == int(chat_id_str):
+                chat_title = title or chat_title
+                break
+    except Exception as e:
+        logging.error(f"Error fetching chat title from DB for {chat_id_str}: {e}")
+    context.user_data["selected_chat_title"] = chat_title
 
     # Show actions for the selected group
     keyboard = [
