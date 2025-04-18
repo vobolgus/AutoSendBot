@@ -15,7 +15,7 @@ from telegram.ext import (
     ChatMemberHandler,
 )
 from apscheduler.schedulers.background import BackgroundScheduler
-from db import init_db, add_chat, remove_chat, get_chats
+from db import init_db, add_chat, remove_chat, get_chats, get_chat_owner
 
 
 # States for conversation handler
@@ -194,14 +194,37 @@ async def action_selected(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
     chat_id = context.user_data.get("selected_chat_id")
     chat_title = context.user_data.get("selected_chat_title", chat_id)
-    user_id = str(update.effective_user.id)
+    # Current user identifiers
+    current_user_id_int = update.effective_user.id
+    user_id = str(current_user_id_int)
 
-    # Load user data
+    # Load or initialize schedule data for this user and chat
     user_data = load_user_data()
     if user_id not in user_data:
         user_data[user_id] = {}
     if chat_id not in user_data[user_id]:
         user_data[user_id][chat_id] = []
+
+    # Permission check: only the chat owner (who added the bot) can add/delete schedules
+    try:
+        chat_owner = get_chat_owner(int(chat_id))
+    except Exception as e:
+        logging.error(f"Error retrieving owner for chat {chat_id}: {e}")
+        chat_owner = None
+    # If no owner recorded, assign current user as owner
+    if chat_owner is None:
+        try:
+            add_chat(int(chat_id), chat_title or '', current_user_id_int)
+            chat_owner = current_user_id_int
+        except Exception as e:
+            logging.error(f"Error setting owner for chat {chat_id}: {e}")
+    # Restrict add/delete actions to owner only
+    if query.data in ("add", "delete") or query.data.startswith("delete_"):
+        if chat_owner != current_user_id_int:
+            await query.edit_message_text(
+                "⚠️ Only the user who added the bot can manage schedules for this group."
+            )
+            return ConversationHandler.END
 
     if query.data == "view":
         # Show existing schedules
@@ -374,11 +397,12 @@ async def chat_member_update(update: Update, context: ContextTypes.DEFAULT_TYPE)
     # Only track bot's own membership changes
     if result.new_chat_member.user.id != context.bot.id:
         return
-    # Added to chat
+    # Added to chat: record chat and owner (user who added the bot)
     if new_status in ('member', 'administrator'):
         try:
-            add_chat(chat.id, chat.title or '')
-            logging.info(f"Added chat {chat.id} - {chat.title}")
+            owner_id = result.from_user.id
+            add_chat(chat.id, chat.title or '', owner_id)
+            logging.info(f"Added chat {chat.id} - {chat.title} by user {owner_id}")
         except Exception as e:
             logging.error(f"Error adding chat {chat.id}: {e}")
     # Removed from chat
