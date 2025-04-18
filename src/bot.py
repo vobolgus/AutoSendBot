@@ -412,11 +412,9 @@ async def main() -> None:
 
     # Start the Bot
     logging.info("Starting bot")
-    await application.initialize()
 
     # Run the bot until the user presses Ctrl-C
-    await application.start_polling()
-    await application.idle()
+    await application.run_polling()
 
     # Shutdown scheduler when bot is stopped
     scheduler.shutdown()
