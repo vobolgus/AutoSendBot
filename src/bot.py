@@ -389,6 +389,13 @@ def main() -> None:
     logging.basicConfig(
         level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s"
     )
+    # Initialize database for tracking chats
+    try:
+        init_db()
+        logging.info("Database initialized successfully")
+    except Exception as e:
+        logging.error(f"Error initializing database: {e}")
+        return
 
     # Get the token from environment variable
     token = os.environ.get("TELEGRAM_BOT_TOKEN")
@@ -405,6 +412,10 @@ def main() -> None:
     application.bot_data["scheduler"] = scheduler
 
     # Register handlers
+    # Track bot being added/removed from chats
+    application.add_handler(
+        ChatMemberHandler(chat_member_update, ChatMemberHandler.MY_CHAT_MEMBER)
+    )
     application.add_handler(CommandHandler("start", start))
 
     # Conversation handler for managing groups and schedules
