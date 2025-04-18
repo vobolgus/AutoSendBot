@@ -1,4 +1,4 @@
-# Telegram Auto Uploader Bot
+# Telegram Message Scheduler Bot
 
 This repository contains a Telegram bot that automatically sends a predefined message to a specified channel every day at scheduled times.
 
@@ -6,8 +6,10 @@ This repository contains a Telegram bot that automatically sends a predefined me
 
 ```
 .
+├── .idx
+│   └── dev.nix
 ├── Dockerfile
-├── .dockerignore
+├── LICENSE
 ├── railway.toml
 ├── requirements.txt
 ├── src
@@ -20,6 +22,7 @@ This repository contains a Telegram bot that automatically sends a predefined me
 - Schedules messages at one or more times per day (cron-style scheduling).
 - Sends messages to a specified Telegram channel.
 - Configurable via environment variables.
+- Basic logging implemented.
 
 ## Environment Variables
 
@@ -31,6 +34,8 @@ This repository contains a Telegram bot that automatically sends a predefined me
 | SCHEDULE_TIMES       | Comma-separated times in `HH:MM` 24-hour format (e.g. `09:00,18:30`) |
 
 ## Running Locally
+
+**Prerequisites:** Ensure you have Python 3.x and pip installed and accessible in your system's PATH.
 
 1. Clone the repository:
 ```bash
@@ -60,7 +65,7 @@ python src/bot.py
 
 1. Build the image:
 ```bash
-docker build -t telegram-bot .
+docker build -t telegram-scheduler-bot .
 ```
 
 2. Run the container:
@@ -70,7 +75,7 @@ docker run -d \
   -e TELEGRAM_CHAT_ID="@yourchannel" \
   -e MESSAGE_TEXT="Hello, world!" \
   -e SCHEDULE_TIMES="09:00,18:30" \
-  telegram-bot
+  telegram-scheduler-bot
 ```
 
 ## Railway Deployment
@@ -89,6 +94,10 @@ railway up
 
 3. Set the environment variables in the Railway dashboard to match the ones above.
 
+## IDX / Cloud Workstations Environment
+
+This project includes a `.idx/dev.nix` file which configures the development environment when opened in IDX or Google Cloud Workstations. This ensures Python and other necessary tools are readily available. You can run the bot directly using `python src/bot.py` within the IDX terminal after setting the environment variables.
+
 ## License
 
-This project is released under the MIT License.
+This project is released under the MIT License. See the `LICENSE` file for details.
