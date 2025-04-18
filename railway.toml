@@ -1,0 +1,11 @@
+project = "telegram-auto-uploader"
+service = "telegram-bot"
+
+[build]
+  builder = "Dockerfile"
+
+[dev]
+  command = "python src/bot.py"
+
+[deploy]
+  command = "python src/bot.py"
