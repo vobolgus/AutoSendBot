@@ -5,9 +5,9 @@ from typing import Dict
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
-    Updater,
+    Application,
     CommandHandler,
-    CallbackContext,
+    ContextTypes,
     CallbackQueryHandler,
     ConversationHandler,
     MessageHandler,
@@ -39,16 +39,19 @@ def save_user_data(data: Dict) -> None:
         json.dump(data, f, indent=2)
 
 
-def send_message(bot, chat_id: str, message_text: str) -> None:
+async def send_message(context: ContextTypes.DEFAULT_TYPE) -> None:
     """Send a message to a specific chat"""
+    job = context.job
+    chat_id, message_text = job.data
+
     try:
-        bot.send_message(chat_id=chat_id, text=message_text)
+        await context.bot.send_message(chat_id=chat_id, text=message_text)
         logging.info(f"Message sent successfully to {chat_id}: {message_text}")
     except Exception as e:
         logging.error(f"Error sending message to {chat_id}: {e}")
 
 
-def schedule_all_messages(scheduler: BackgroundScheduler, bot) -> None:
+def schedule_all_messages(scheduler: BackgroundScheduler, app: Application) -> None:
     """Schedule all messages for all users from the saved data"""
     user_data = load_user_data()
 
@@ -65,39 +68,61 @@ def schedule_all_messages(scheduler: BackgroundScheduler, bot) -> None:
                         hour, minute = int(hour_str), int(minute_str)
 
                         scheduler.add_job(
-                            send_message,
+                            send_scheduled_message,
                             "cron",
                             hour=hour,
                             minute=minute,
-                            args=[bot, chat_id, message],
+                            args=[app, chat_id, message],
                         )
                         logging.info(
-                            f"Scheduled message for chat {chat_id} " f"at {time_str}"
+                            f"Scheduled message for chat {chat_id} at {time_str}"
                         )
                     except ValueError:
                         logging.error(
-                            f"Invalid time format '{time_str}' " f"for chat {chat_id}"
+                            f"Invalid time format '{time_str}' for chat {chat_id}"
                         )
 
 
-def start(update: Update, context: CallbackContext) -> None:
+async def send_scheduled_message(
+    app: Application, chat_id: str, message_text: str
+) -> None:
+    """Send a scheduled message through the application"""
+    try:
+        await app.bot.send_message(chat_id=chat_id, text=message_text)
+        logging.info(
+            f"Scheduled message sent successfully to {chat_id}: {message_text}"
+        )
+    except Exception as e:
+        logging.error(f"Error sending scheduled message to {chat_id}: {e}")
+
+
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Send a welcome message when the /start command is issued."""
-    update.message.reply_text(
+    await update.message.reply_text(
         "Welcome to AutoSendBot! I can help you schedule messages to groups.\n"
         "Use /groups to see your groups and manage schedules."
     )
 
 
-def list_groups(update: Update, context: CallbackContext) -> int:
+async def list_groups(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """List groups where the bot is a member"""
     # Get chats where the bot is a member
     bot_chats = []
-    for chat in context.bot.get_updates():
-        if chat.message and chat.message.chat.type in ["group", "supergroup"]:
-            bot_chats.append((chat.message.chat.id, chat.message.chat.title))
+    try:
+        updates = await context.bot.get_updates()
+        for update_obj in updates:
+            if update_obj.message and update_obj.message.chat.type in [
+                "group",
+                "supergroup",
+            ]:
+                bot_chats.append(
+                    (update_obj.message.chat.id, update_obj.message.chat.title)
+                )
+    except Exception as e:
+        logging.error(f"Error getting updates: {e}")
 
     if not bot_chats:
-        update.message.reply_text(
+        await update.message.reply_text(
             "I'm not a member of any groups yet. Add me to a group first!"
         )
         return ConversationHandler.END
@@ -110,20 +135,20 @@ def list_groups(update: Update, context: CallbackContext) -> int:
     keyboard.append([InlineKeyboardButton("Cancel", callback_data="cancel")])
     reply_markup = InlineKeyboardMarkup(keyboard)
 
-    update.message.reply_text(
+    await update.message.reply_text(
         "Select a group to manage schedules:", reply_markup=reply_markup
     )
 
     return CHOOSING_GROUP
 
 
-def group_selected(update: Update, context: CallbackContext) -> int:
+async def group_selected(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Handle group selection"""
     query = update.callback_query
-    query.answer()
+    await query.answer()
 
     if query.data == "cancel":
-        query.edit_message_text("Operation cancelled.")
+        await query.edit_message_text("Operation cancelled.")
         return ConversationHandler.END
 
     # Extract chat_id from callback data
@@ -131,9 +156,10 @@ def group_selected(update: Update, context: CallbackContext) -> int:
     context.user_data["selected_chat_id"] = chat_id
 
     # Get chat title
-    for chat in context.bot.get_updates():
-        if chat.message and str(chat.message.chat.id) == chat_id:
-            context.user_data["selected_chat_title"] = chat.message.chat.title
+    updates = await context.bot.get_updates()
+    for update_obj in updates:
+        if update_obj.message and str(update_obj.message.chat.id) == chat_id:
+            context.user_data["selected_chat_title"] = update_obj.message.chat.title
             break
 
     # Show actions for the selected group
@@ -147,22 +173,24 @@ def group_selected(update: Update, context: CallbackContext) -> int:
     reply_markup = InlineKeyboardMarkup(keyboard)
 
     chat_title = context.user_data.get("selected_chat_title", chat_id)
-    query.edit_message_text(f"Managing group: {chat_title}", reply_markup=reply_markup)
+    await query.edit_message_text(
+        f"Managing group: {chat_title}", reply_markup=reply_markup
+    )
 
     return CHOOSING_ACTION
 
 
-def action_selected(update: Update, context: CallbackContext) -> int:
+async def action_selected(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Handle action selection"""
     query = update.callback_query
-    query.answer()
+    await query.answer()
 
     if query.data == "cancel":
-        query.edit_message_text("Operation cancelled.")
+        await query.edit_message_text("Operation cancelled.")
         return ConversationHandler.END
 
     if query.data == "back":
-        return list_groups(update, context)
+        return await list_groups(update, context)
 
     chat_id = context.user_data.get("selected_chat_id")
     chat_title = context.user_data.get("selected_chat_title", chat_id)
@@ -179,7 +207,7 @@ def action_selected(update: Update, context: CallbackContext) -> int:
         # Show existing schedules
         schedules = user_data[user_id][chat_id]
         if not schedules:
-            query.edit_message_text(
+            await query.edit_message_text(
                 f"No schedules for {chat_title}.\n" f"Use /groups to go back."
             )
         else:
@@ -191,13 +219,13 @@ def action_selected(update: Update, context: CallbackContext) -> int:
                     f"   Times: {times}\n\n"
                 )
 
-            query.edit_message_text(schedule_text + "Use /groups to go back.")
+            await query.edit_message_text(schedule_text + "Use /groups to go back.")
         return ConversationHandler.END
 
     elif query.data == "add":
         # Start process to add a new schedule
         context.user_data["action"] = "add"
-        query.edit_message_text(
+        await query.edit_message_text(
             f"Adding new schedule for {chat_title}.\n"
             f"Send me the message text you want to schedule:"
         )
@@ -207,7 +235,7 @@ def action_selected(update: Update, context: CallbackContext) -> int:
         # Show schedules to delete
         schedules = user_data[user_id][chat_id]
         if not schedules:
-            query.edit_message_text(
+            await query.edit_message_text(
                 f"No schedules to delete for {chat_title}.\n" f"Use /groups to go back."
             )
             return ConversationHandler.END
@@ -221,7 +249,7 @@ def action_selected(update: Update, context: CallbackContext) -> int:
         keyboard.append([InlineKeyboardButton("Cancel", callback_data="cancel")])
         reply_markup = InlineKeyboardMarkup(keyboard)
 
-        query.edit_message_text(
+        await query.edit_message_text(
             f"Select a schedule to delete from {chat_title}:", reply_markup=reply_markup
         )
         return CHOOSING_ACTION
@@ -235,15 +263,16 @@ def action_selected(update: Update, context: CallbackContext) -> int:
             save_user_data(user_data)
 
             # Reschedule all jobs
-            schedule_all_messages(context.bot_data["scheduler"], context.bot)
+            app = context.application
+            schedule_all_messages(app.bot_data["scheduler"], app)
 
             times = ", ".join(deleted.get("times", []))
-            query.edit_message_text(
+            await query.edit_message_text(
                 f"Schedule deleted: {deleted.get('message')} at {times}.\n"
                 f"Use /groups to go back."
             )
         else:
-            query.edit_message_text(
+            await query.edit_message_text(
                 "Invalid schedule index.\n" "Use /groups to go back."
             )
         return ConversationHandler.END
@@ -251,11 +280,11 @@ def action_selected(update: Update, context: CallbackContext) -> int:
     return ConversationHandler.END
 
 
-def message_entered(update: Update, context: CallbackContext) -> int:
+async def message_entered(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Handle the entered message for scheduling"""
     context.user_data["message"] = update.message.text
 
-    update.message.reply_text(
+    await update.message.reply_text(
         "Now send me the time(s) to schedule this message.\n"
         "Format: HH:MM (24-hour format)\n"
         "For multiple times, separate with commas (e.g., 09:00, 15:30)"
@@ -264,7 +293,7 @@ def message_entered(update: Update, context: CallbackContext) -> int:
     return SET_TIME
 
 
-def time_entered(update: Update, context: CallbackContext) -> int:
+async def time_entered(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Handle the entered time(s) for scheduling"""
     times_text = update.message.text
     times = [t.strip() for t in times_text.split(",") if t.strip()]
@@ -284,14 +313,14 @@ def time_entered(update: Update, context: CallbackContext) -> int:
             invalid_times.append(t)
 
     if invalid_times:
-        update.message.reply_text(
+        await update.message.reply_text(
             f"Invalid time format(s): {', '.join(invalid_times)}.\n"
             f"Please try again with the format HH:MM (24-hour format)."
         )
         return SET_TIME
 
     if not valid_times:
-        update.message.reply_text("No valid times provided. Please try again.")
+        await update.message.reply_text("No valid times provided. Please try again.")
         return SET_TIME
 
     # Save the schedule
@@ -313,10 +342,10 @@ def time_entered(update: Update, context: CallbackContext) -> int:
     save_user_data(user_data)
 
     # Reschedule all jobs
-    bot = update.effective_message.bot
-    schedule_all_messages(context.bot_data["scheduler"], bot)
+    app = context.application
+    schedule_all_messages(app.bot_data["scheduler"], app)
 
-    update.message.reply_text(
+    await update.message.reply_text(
         f"Schedule added for {chat_title}:\n"
         f"Message: {message}\n"
         f"Times: {', '.join(valid_times)}\n\n"
@@ -326,18 +355,18 @@ def time_entered(update: Update, context: CallbackContext) -> int:
     return ConversationHandler.END
 
 
-def cancel(update: Update, context: CallbackContext) -> int:
+async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Cancel the conversation."""
-    update.message.reply_text("Operation cancelled.")
+    await update.message.reply_text("Operation cancelled.")
     return ConversationHandler.END
 
 
-def error_handler(update: Update, context: CallbackContext) -> None:
+async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Log errors caused by updates."""
     logging.error(f"Update {update} caused error {context.error}")
 
 
-def main():
+async def main() -> None:
     """Run the bot."""
     logging.basicConfig(
         level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s"
@@ -349,17 +378,16 @@ def main():
         logging.error("Environment variable TELEGRAM_BOT_TOKEN must be set")
         return
 
-    # Create the updater and dispatcher
-    updater = Updater(token=token)
-    dispatcher = updater.dispatcher
+    # Create the application
+    application = Application.builder().token(token).build()
 
     # Create the scheduler for scheduled messages
     scheduler = BackgroundScheduler()
     scheduler.start()
-    dispatcher.bot_data["scheduler"] = scheduler
+    application.bot_data["scheduler"] = scheduler
 
     # Register handlers
-    dispatcher.add_handler(CommandHandler("start", start))
+    application.add_handler(CommandHandler("start", start))
 
     # Conversation handler for managing groups and schedules
     conv_handler = ConversationHandler(
@@ -374,24 +402,27 @@ def main():
         },
         fallbacks=[CommandHandler("cancel", cancel)],
     )
-    dispatcher.add_handler(conv_handler)
+    application.add_handler(conv_handler)
 
     # Register error handler
-    dispatcher.add_error_handler(error_handler)
+    application.add_error_handler(error_handler)
 
     # Load and schedule all messages
-    schedule_all_messages(scheduler, updater.bot)
+    schedule_all_messages(scheduler, application)
 
     # Start the Bot
     logging.info("Starting bot")
-    updater.start_polling()
+    await application.initialize()
 
-    # Run the bot until you press Ctrl-C
-    updater.idle()
+    # Run the bot until the user presses Ctrl-C
+    await application.start_polling()
+    await application.idle()
 
     # Shutdown scheduler when bot is stopped
     scheduler.shutdown()
 
 
 if __name__ == "__main__":
-    main()
+    import asyncio
+
+    asyncio.run(main())
