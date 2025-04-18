@@ -11,8 +11,8 @@ from telegram.ext import (
     CallbackQueryHandler,
     ConversationHandler,
     MessageHandler,
-    Filters,
 )
+from telegram.ext.filters import Filters
 from apscheduler.schedulers.background import BackgroundScheduler
 
 
@@ -72,13 +72,11 @@ def schedule_all_messages(scheduler: BackgroundScheduler, bot) -> None:
                             args=[bot, chat_id, message],
                         )
                         logging.info(
-                            f"Scheduled message for chat {chat_id} "
-                            f"at {time_str}"
+                            f"Scheduled message for chat {chat_id} " f"at {time_str}"
                         )
                     except ValueError:
                         logging.error(
-                            f"Invalid time format '{time_str}' "
-                            f"for chat {chat_id}"
+                            f"Invalid time format '{time_str}' " f"for chat {chat_id}"
                         )
 
 
@@ -107,9 +105,7 @@ def list_groups(update: Update, context: CallbackContext) -> int:
     # Create inline keyboard with groups
     keyboard = []
     for chat_id, title in bot_chats:
-        keyboard.append([
-            InlineKeyboardButton(title, callback_data=f"group_{chat_id}")
-        ])
+        keyboard.append([InlineKeyboardButton(title, callback_data=f"group_{chat_id}")])
 
     keyboard.append([InlineKeyboardButton("Cancel", callback_data="cancel")])
     reply_markup = InlineKeyboardMarkup(keyboard)
@@ -151,10 +147,7 @@ def group_selected(update: Update, context: CallbackContext) -> int:
     reply_markup = InlineKeyboardMarkup(keyboard)
 
     chat_title = context.user_data.get("selected_chat_title", chat_id)
-    query.edit_message_text(
-        f"Managing group: {chat_title}",
-        reply_markup=reply_markup
-    )
+    query.edit_message_text(f"Managing group: {chat_title}", reply_markup=reply_markup)
 
     return CHOOSING_ACTION
 
@@ -187,8 +180,7 @@ def action_selected(update: Update, context: CallbackContext) -> int:
         schedules = user_data[user_id][chat_id]
         if not schedules:
             query.edit_message_text(
-                f"No schedules for {chat_title}.\n"
-                f"Use /groups to go back."
+                f"No schedules for {chat_title}.\n" f"Use /groups to go back."
             )
         else:
             schedule_text = f"Schedules for {chat_title}:\n\n"
@@ -216,8 +208,7 @@ def action_selected(update: Update, context: CallbackContext) -> int:
         schedules = user_data[user_id][chat_id]
         if not schedules:
             query.edit_message_text(
-                f"No schedules to delete for {chat_title}.\n"
-                f"Use /groups to go back."
+                f"No schedules to delete for {chat_title}.\n" f"Use /groups to go back."
             )
             return ConversationHandler.END
 
@@ -225,18 +216,13 @@ def action_selected(update: Update, context: CallbackContext) -> int:
         for i, schedule in enumerate(schedules):
             times = ", ".join(schedule.get("times", []))
             label = f"{i+1}. {schedule.get('message')} at {times}"
-            keyboard.append([
-                InlineKeyboardButton(label, callback_data=f"delete_{i}")
-            ])
+            keyboard.append([InlineKeyboardButton(label, callback_data=f"delete_{i}")])
 
-        keyboard.append([
-            InlineKeyboardButton("Cancel", callback_data="cancel")
-        ])
+        keyboard.append([InlineKeyboardButton("Cancel", callback_data="cancel")])
         reply_markup = InlineKeyboardMarkup(keyboard)
 
         query.edit_message_text(
-            f"Select a schedule to delete from {chat_title}:",
-            reply_markup=reply_markup
+            f"Select a schedule to delete from {chat_title}:", reply_markup=reply_markup
         )
         return CHOOSING_ACTION
 
@@ -258,8 +244,7 @@ def action_selected(update: Update, context: CallbackContext) -> int:
             )
         else:
             query.edit_message_text(
-                "Invalid schedule index.\n"
-                "Use /groups to go back."
+                "Invalid schedule index.\n" "Use /groups to go back."
             )
         return ConversationHandler.END
 
@@ -383,17 +368,9 @@ def main():
             CHOOSING_GROUP: [CallbackQueryHandler(group_selected)],
             CHOOSING_ACTION: [CallbackQueryHandler(action_selected)],
             SET_MESSAGE: [
-                MessageHandler(
-                    Filters.text & ~Filters.command,
-                    message_entered
-                )
+                MessageHandler(Filters.text & ~Filters.command, message_entered)
             ],
-            SET_TIME: [
-                MessageHandler(
-                    Filters.text & ~Filters.command,
-                    time_entered
-                )
-            ],
+            SET_TIME: [MessageHandler(Filters.text & ~Filters.command, time_entered)],
         },
         fallbacks=[CommandHandler("cancel", cancel)],
     )
