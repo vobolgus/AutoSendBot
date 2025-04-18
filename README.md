@@ -14,8 +14,6 @@ Telegram Auto Sender Bot is an interactive Telegram bot that allows users to sch
 ├── src
 │   ├── bot.py        # Main bot implementation
 │   └── db.py         # Database module for tracking chats
-├── example_bot_v20.py  # Example bot setup (python-telegram-bot v20)
-├── test_indent.py      # Indentation test example
 ├── LICENSE
 └── README.md
 ```
