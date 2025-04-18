@@ -148,6 +148,8 @@ async def group_selected(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     # Extract chat_id from callback data and save
     chat_id_str = query.data.split("_", 1)[1]
     context.user_data["selected_chat_id"] = chat_id_str
+    # expose chat_id variable for use below
+    chat_id = chat_id_str
 
     # Retrieve chat title from database, fallback to ID if missing
     chat_title = chat_id_str
