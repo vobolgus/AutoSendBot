@@ -6,6 +6,7 @@ import psycopg2
 
 # Ensure psycopg2 returns tuples for fetchall
 from psycopg2.extras import RealDictCursor
+from typing import Optional
 
 # Expected environment variable DATABASE_URL, e.g., from Railway
 DATABASE_URL = os.environ.get("DATABASE_URL")
@@ -43,7 +44,7 @@ def init_db():
     finally:
         conn.close()
 
-def add_chat(chat_id: int, title: str, owner_id: int | None = None) -> None:
+def add_chat(chat_id: int, title: str, owner_id: Optional[int] = None) -> None:
     """Add or update a chat record, optionally setting the owner_id."""
     conn = get_connection()
     try:
@@ -86,7 +87,7 @@ def get_chats() -> list[tuple[int, str]]:
     finally:
         conn.close()
     
-def get_chat_owner(chat_id: int) -> int | None:
+def get_chat_owner(chat_id: int) -> Optional[int]:
     """Return the owner_id for a given chat_id, or None if not set."""
     conn = get_connection()
     try:
