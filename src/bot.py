@@ -366,7 +366,7 @@ async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     logging.error(f"Update {update} caused error {context.error}")
 
 
-async def main() -> None:
+def main() -> None:
     """Run the bot."""
     logging.basicConfig(
         level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s"
@@ -414,13 +414,11 @@ async def main() -> None:
     logging.info("Starting bot")
 
     # Run the bot until the user presses Ctrl-C
-    await application.run_polling()
+    application.run_polling(stop_signals=None)
 
     # Shutdown scheduler when bot is stopped
     scheduler.shutdown()
 
 
 if __name__ == "__main__":
-    import asyncio
-
-    asyncio.run(main())
+    main()
